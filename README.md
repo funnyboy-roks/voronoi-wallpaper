@@ -6,6 +6,8 @@ An application for creating wallpapers using the [Voronoi Diagram](https://en.wi
 
 ![original](./img/original.jpg)
 
+<sup>Source: [Agnese Rudzīte](https://unsplash.com/photos/field-of-red-poppies-and-blue-cornflowers-under-clear-sky-RnIdVaAmbjE)</sup>
+
 Becomes
 
 ![voronoi example](./img/screenshot.png)
