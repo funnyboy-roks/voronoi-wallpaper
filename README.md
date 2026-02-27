@@ -1,6 +1,8 @@
-# Voronoi Wallpaper
+# Geometric Wallpaper Generator
 
-An application for creating wallpapers using the [Voronoi Diagram](https://en.wikipedia.org/wiki/Voronoi_diagram).
+An application for creating wallpapers using the
+[Voronoi Diagram](https://en.wikipedia.org/wiki/Voronoi_diagram) or
+[Delaunay Triangulation](https://en.wikipedia.org/wiki/Delaunay_triangulation) (wip).
 
 ## Example
 
@@ -25,3 +27,7 @@ make
 ```sh
 ./main <image>
 ```
+
+## References
+
+- https://web.archive.org/web/20251119183353/http://www.geom.uiuc.edu/~samuelp/del_project.html

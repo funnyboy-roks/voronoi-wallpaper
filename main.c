@@ -6,7 +6,10 @@
 #include <assert.h>
 #include <string.h>
 
-#define da_reserve(da, expected_capacity)                                              \
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"
+
+#define da_reserve(da, expected_capacity)                                                  \
     do {                                                                                   \
         if ((expected_capacity) > (da)->capacity) {                                        \
             if ((da)->capacity == 0) {                                                     \
@@ -163,6 +166,21 @@ void voronoi(Texture2D texture, Vectors points, Image img, ColourSpace colour_sp
     UpdateTexture(texture, pixels);
 }
 
+#define PADDING 24
+#define BUTTON_WIDTH 300
+#define BUTTON_HEIGHT 60
+#define GAP 5
+
+Rectangle button_rect(int *button_i) {
+    float button_spacing = BUTTON_HEIGHT + GAP;
+    return (Rectangle) {
+        .x      = PADDING,
+        .y      = PADDING + button_spacing*((*button_i)++),
+        .width  = BUTTON_WIDTH,
+        .height = BUTTON_HEIGHT
+    };
+}
+
 int main(int argc, const char **argv) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <image>\n", argv[0]);
@@ -178,44 +196,23 @@ int main(int argc, const char **argv) {
     Texture2D texture = LoadTextureFromImage(img);
     Texture2D vtexture = LoadRenderTexture(WIDTH, HEIGHT).texture;
 
-    bool show_points = false;
-    bool show_texture = true;
-    bool show_overlay = true;
+    bool show_points   = false;
+    bool show_texture  = true;
+    bool show_overlay  = true;
+    bool adding_points = false;
     ColourSpace colour_space = CS_RGB;
 
     Vectors p = {0};
-    fill_random(&p);
+    // fill_random(&p);
+    randomise(&p, 10);
     voronoi(vtexture, p, img, colour_space);
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(GetColor(0x191919ff));
+        if (show_texture) DrawTexture(vtexture, 0, 0, WHITE);
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            da_append(&p, GetMousePosition());
-            if (show_texture) voronoi(vtexture, p, img, colour_space);
-        } else if (IsKeyPressed(KEY_R)) {
-            randomise(&p, 50);
-            if (show_texture) voronoi(vtexture, p, img, colour_space);
-        } else if (IsKeyPressed(KEY_SPACE)) {
-            TraceLog(LOG_INFO, "Refilling random points");
-            p.count = 0;
-            fill_random(&p);
-            if (show_texture) voronoi(vtexture, p, img, colour_space);
-        } else if (IsKeyPressed(KEY_P)) {
-            show_points ^= 1;
-        } else if (IsKeyPressed(KEY_T)) {
-            show_texture ^= 1;
-            if (show_texture) voronoi(vtexture, p, img, colour_space);
-        } else if (IsKeyPressed(KEY_S)) {
-            colour_space = (colour_space + 1)%CS_LEN;
-            if (show_texture) voronoi(vtexture, p, img, colour_space);
-        } else if (IsKeyPressed(KEY_O)) {
-            show_overlay ^= 1;
-        }
-
-        if (show_texture) {
-            DrawTexture(vtexture, 0, 0, WHITE);
-        }
+        if (adding_points) GuiLock();
+        else GuiUnlock();
 
         if (show_points) {
             for (size_t i = 0; i < p.count; ++i) {
@@ -224,9 +221,80 @@ int main(int argc, const char **argv) {
             }
         }
 
-        if (show_overlay) {
-            DrawText(TextFormat("Colour Space: %s\n", cs_names[colour_space]), 0, 0, 30, WHITE);
+        int button_i = 0;
+
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 30);
+
+        if (
+            IsKeyPressed(KEY_R)
+            | (show_overlay && GuiButton(button_rect(&button_i), "Add Random"))
+        ) {
+            randomise(&p, 50);
+            if (show_texture) voronoi(vtexture, p, img, colour_space);
         }
+
+        if (
+            IsKeyPressed(KEY_SPACE)
+            | (show_overlay && GuiButton(button_rect(&button_i), "Randomise"))
+        ) {
+            TraceLog(LOG_INFO, "Refilling random points");
+            p.count = 0;
+            adding_points = true;
+            // fill_random(&p);
+        }
+
+        if (
+            IsKeyPressed(KEY_P)
+            | (
+                show_overlay && GuiButton(
+                    button_rect(&button_i),
+                    show_points ? "Hide Points" : "Show Points"
+                )
+            )
+        ) {
+            show_points ^= 1;
+        }
+
+        if (
+            IsKeyPressed(KEY_T)
+            | (
+                show_overlay && GuiButton(
+                    button_rect(&button_i),
+                    show_texture ? "Hide Texture" : "Show Texture"
+                )
+            )
+       ) {
+            show_texture ^= 1;
+            if (show_texture) voronoi(vtexture, p, img, colour_space);
+        }
+
+        if (
+            IsKeyPressed(KEY_S)
+            | (
+                show_overlay && GuiButton(
+                    button_rect(&button_i),
+                    TextFormat("Colour Space: %s", cs_names[colour_space])
+                )
+            )
+        ) {
+            colour_space = (colour_space + 1)%CS_LEN;
+            if (show_texture) voronoi(vtexture, p, img, colour_space);
+        }
+
+        if (IsKeyPressed(KEY_O)) {
+            show_overlay ^= 1;
+        }
+
+        if (adding_points) {
+            int added = randomise(&p, 1000);
+            TraceLog(LOG_INFO, "Added %d point(s)", added);
+            if (added < 100) {
+                TraceLog(LOG_INFO, "Done adding points");
+                adding_points = false;
+            }
+            if (show_texture) voronoi(vtexture, p, img, colour_space);
+        }
+
         EndDrawing();
     }
     CloseWindow();
